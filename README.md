@@ -76,10 +76,178 @@ $$
 
 ---
 ## Algorithm
-        )
+       Algorithm — Q-Learning Control using FrozenLake-v1
+Step 1: Initialize the environment
+
+Create the FrozenLake-v1 environment with a 4 × 4 grid.
+
+Step 2: Initialize the Q-table
+
+Create a Q-table with:
+
+16 states
+4 actions
+
+Initialize all Q-values to zero.
+
+Step 3: Set hyperparameters
+
+Set:
+
+Learning rate α = 0.1
+Discount factor γ = 0.99
+Initial exploration rate ε = 1.0
+Minimum exploration rate εmin = 0.01
+Epsilon decay rate = 0.0001
+Number of training episodes = 10000
+Step 4: Select an action using epsilon-greedy
+
+For the current state:
+
+Generate a random number.
+If the number is less than ε, select a random action.
+Otherwise, select the action having the maximum Q-value.
+Step 5: Perform the action
+
+Execute the selected action in the environment and obtain:
+
+Next state
+Reward
+Termination status
+Truncation status
+Step 6: Calculate the target
+
+For a non-terminal state:
+
+$$ Target = R_{t+1}+\gamma\max_a Q(S_{t+1},a) $$
+
+For a terminal state:
+
+$$ Target = R_{t+1} $$
+Step 7: Update the Q-value
+$$ Q(S_t,A_t)\leftarrow Q(S_t,A_t)+ \alpha[Target-Q(S_t,A_t)] $$
+Step 8: Move to the next state
+
+Set:
+
+state = next_state
+
+Continue until the episode terminates or is truncated.
+
+Step 9: Decay epsilon
+
+After every episode:
+
+$$ \epsilon=\max(\epsilon_{min},\epsilon-\text{decay}) $$
+
+This gradually changes the agent from exploration to exploitation.
+## PROGRAM
+```
+import gymnasium as gym
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --------------------------------------------------
+# 1. Create FrozenLake environment
+# --------------------------------------------------
+
+env = gym.make("FrozenLake-v1", is_slippery=False)
+
+# Number of states and actions
+num_states = env.observation_space.n
+num_actions = env.action_space.n
+
+print("Number of states :", num_states)
+print("Number of actions:", num_actions)
+
+
+# --------------------------------------------------
+# 2. Initialize Q-table
+# --------------------------------------------------
+
+Q = np.zeros((num_states, num_actions))
+
+
+# --------------------------------------------------
+# 3. Hyperparameters
+# --------------------------------------------------
+
+alpha = 0.1          # Learning rate
+gamma = 0.99         # Discount factor
+
+epsilon = 1.0        # Initial exploration rate
+min_epsilon = 0.01   # Minimum exploration rate
+epsilon_decay_rate = 0.0001
+
+num_episodes = 10000
+
+
+# --------------------------------------------------
+# 4. Store rewards
+# --------------------------------------------------
+
+episode_rewards = []
+
+
+# --------------------------------------------------
+# 5. Q-Learning training
+# --------------------------------------------------
+
+for episode in range(num_episodes):
+
+    state, info = env.reset()
+
+    done = False
+    total_episode_reward = 0
+
+    while not done:
+
+        # ------------------------------------------
+        # Epsilon-greedy action selection
+        # ------------------------------------------
+
+        if np.random.random() < epsilon:
+            # Exploration
+            action = env.action_space.sample()
+
+        else:
+            # Exploitation
+            action = np.argmax(Q[state, :])
+
+        # ------------------------------------------
+        # Take action
+        # ------------------------------------------
+
+        new_state, reward, terminated, truncated, info = env.step(action)
+
+        done = terminated or truncated
+
+        # ------------------------------------------
+        # Q-Learning update
+        # ------------------------------------------
+
+        if terminated:
+            # No future value after terminal state
+            target = reward
+
+        else:
+            # Bellman optimality target
+            target = reward + gamma * np.max(Q[new_state, :])
+
+        Q[state, action] = Q[state, action] + \
+            alpha * (target - Q[state, action])
+
+        # ------------------------------------------
+        # Move to next state
+        # ------------------------------------------
 
         state = new_state
+
         total_episode_reward += reward
+
+    # ----------------------------------------------
+    # Decay epsilon
+    # ----------------------------------------------
 
     epsilon = max(
         min_epsilon,
@@ -87,6 +255,76 @@ $$
     )
 
     episode_rewards.append(total_episode_reward)
+
+
+# --------------------------------------------------
+# 6. Display final Q-table
+# --------------------------------------------------
+
+print("\nFinal Q-table:")
+print(np.round(Q, 3))
+
+
+# --------------------------------------------------
+# 7. Calculate state-value function
+# --------------------------------------------------
+
+state_values = np.max(Q, axis=1)
+
+print("\nEstimated State-Value Function:")
+print(np.round(state_values, 3))
+
+
+# --------------------------------------------------
+# 8. Extract learned policy
+# --------------------------------------------------
+
+policy = np.argmax(Q, axis=1)
+
+print("\nLearned Policy:")
+print(policy)
+
+
+# --------------------------------------------------
+# 9. Calculate average reward
+# --------------------------------------------------
+
+average_reward = np.mean(episode_rewards[-1000:])
+
+print("\nAverage reward over last 1000 episodes:",
+      average_reward)
+
+
+# --------------------------------------------------
+# 10. Plot learning curve
+# --------------------------------------------------
+
+window = 100
+
+moving_average = np.convolve(
+    episode_rewards,
+    np.ones(window) / window,
+    mode="valid"
+)
+
+plt.figure(figsize=(8, 5))
+
+plt.plot(moving_average)
+
+plt.xlabel("Episode")
+plt.ylabel("Average Reward")
+plt.title("Q-Learning Performance on FrozenLake")
+
+plt.grid(True)
+plt.show()
+
+
+# --------------------------------------------------
+# 11. Close environment
+# --------------------------------------------------
+
+env.close()
+```
 
 
 
